@@ -28,6 +28,13 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 /* =========================================================================
+ * Inline helper (stdint.h abs(3) would also work, but this avoids the
+ * libc dependency — int32_t on Cortex-M0+ is 32 bits so inline is free)
+ * ========================================================================= */
+
+static inline int32_t abs32(int32_t v) { return v < 0 ? -v : v; }
+
+/* =========================================================================
  * Devicetree-derived configuration (per-instance)
  * ========================================================================= */
 
