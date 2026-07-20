@@ -1,12 +1,5 @@
 name: zmk-keyboard-ploopy
 build:
-  depends:
-    - zmk-driver-pmw3360
-    - zmk-behavior-sensor-attr-cycle
-    - zmk-driver-rp2040-sleep
-    - zmk-pointing-acceleration
-    - zmk-input-processor-report-rate-limit
-    - zmk-input-processor-xyz
   cmake: .
   kconfig: Kconfig
   settings:
