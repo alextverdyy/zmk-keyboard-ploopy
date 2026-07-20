@@ -55,19 +55,38 @@
     //   4. zip_xy_scaler          - 3x Y, 2x X amplification to compensate for
     //                                PMW3360 running at 900 CPI vs typical 1200
     mouse_listener {
+        // 1:1 (no-op) cursor amplifier. The previous `zip_xy_scaler 3 2`
+        // amplified REL_X/REL_Y 2x/1.5x BEFORE the scroll mapper, so a
+        // small ball flick produced an oversized WHEEL scroll. Scaling
+        // REL_X/REL_Y only scales motion — there's no way to express "fast
+        // cursor, slow scroll" without a separate scaler per axis on the
+        // scroll side. With this removed, scroll mid-flicks produce 1
+        // REL_WHEEL unit per ball count, which is the natural feel.
         input-processors = <&pointer_accel>,
                            <&zip_report_rate_limit 8>,
                            <&zip_xy_transform (SENSOR_TRANSFORM)>,
-                           <&zip_xy_scaler 3 2>;
+                           <&zip_xy_scaler 1 1>;
 
         scroller {
             layers = <SCROLL>;
-            // &scroll_inertia sits AFTER zip_xy_to_scroll_mapper so it sees
-            // integer scroll-tick values (HWHEEL/WHEEL), not raw rel-x/y.
-            // `&zip_xy_to_scroll_mapper` already converts Y→WHEEL / X→HWHEEL,
-            // which is the input the inertia processor expects.
+            // 1:1 scroll scaler kept here as a placeholder — tune the two
+            // numeric arguments (multiply, divide) to taste. Without it,
+            // WHEEL values pass through at the natural 1-tick-per-ball-unit
+            // rate; with it, you can slow scroll down (e.g. `2 5` to give
+            // 0.4x) or speed it up without changing cursor speed.
+            //
+            // scroll_inertia: previous scale=4 / scale-div=675 was tuned for
+            // the README's recommended chain ending with `zip_scroll_scaler
+            // 4 675` (the two mirror each other so the net scaling is 1:1).
+            // We don't have that trailing scaler, so the inertia output was
+            // * (4/675) ≈ 0.6% per tick — effectively invisible coast.
+            //
+            // Picking the README's "1:10 ratio" tier instead (scale 100,
+            // scale-div 1000) gives a smooth coast at reasonable scroll
+            // unit rates without needing a compensating scaler after.
             input-processors = <&zip_xy_transform (SCROLL_TRANSFORM)>,
                                <&zip_xy_to_scroll_mapper>,
+                               <&zip_scroll_scaler 1 1>,
                                <&scroll_inertia>;
         };
     };
@@ -107,8 +126,8 @@
         compatible = "zmk,input-processor-scroll-inertia";
         #input-processor-cells = <0>;
         layer = <1>;
-        scale = <4>;
-        scale-div = <675>;
+        scale = <100>;
+        scale-div = <1000>;
     };
 
     combos {
@@ -144,25 +163,37 @@
         compatible = "zmk,keymap";
 
         base_layer {
-            // Mirrors the ASCII-art layout from kaihchang/zmk-simply-adept:
+            // ASCII-art layout (structure matches kaihchang/zmk-simply-adept,
+            // tap behavior is plain Tab instead of the kaihchang browser-tab
+            // shortcut — see comment block below).
             //
             //   ╭────────────────┬──────────┬─────────┬────────────────────────╮
-            //   │  Left Tab      │ Previous │ Next    │ scroll_layer/Right Tab │
-            //   │   LC(PAGE_UP)  │   MB4    │   MB5   │  &lt SCROLL LC(PAGE_DOWN) │
+            //   │  Tab           │ Previous │ Next    │ scroll_layer/Tab       │
+            //   │   &kp TAB      │   MB4    │   MB5   │  &lt SCROLL TAB          │
             //   ├────────────────┼──────────┼─────────┼────────────────────────┤
             //   │  Left Click    │          │         │ Right Click            │
             //   │    MB1         │          │         │    MB2                 │
             //   ╰────────────────┴──────────┴─────────┴────────────────────────╯
             //
-            // Pos 0 (top-left TALL)  : utility       — tap = browser back-tab
+            // Pos 0 (top-left TALL)  : utility       — tap = plain Tab
             // Pos 1 (top-2nd SMALL)  : mouse back    — MB4
             // Pos 2 (top-3rd SMALL)  : mouse forward — MB5
-            // Pos 3 (top-right TALL) : scroll layer  — hold = SCROLL, tap = fwd-tab
+            // Pos 3 (top-right TALL) : scroll layer  — hold = SCROLL, tap = Tab
             // Pos 4 (bottom-left BIG): primary left  — MB1
             // Pos 5 (bottom-right BIG): primary right — MB2
             // Middle click (MB3) is chorded via combo_mb3 above.
+            //
+            // Why not kaihchang's `LC(PAGE_UP)` / `LC(PAGE_DOWN)` (the
+            // "browser-tab forward/back" shortcuts used by Chrome/Firefox)?
+            // Because on the host we tested, LC(PAGE_UP)/DOWN was reported
+            // as those exact modifiers+keycode combinations, which some
+            // applications don't recognise as "next tab" — they treat it
+            // as Ctrl+Page Down (e.g. jumping to a different page in a PDF
+            // reader, or scrolling in browsers where Ctrl+Page Down isn't
+            // remapped to tab-switch). Sending plain &kp TAB is unambiguous:
+            // every host forwards it as the unmodified Tab keycode.
             bindings = <
-                &kp LC(PAGE_UP)               &mkp MB4   &mkp MB5   &lt SCROLL LC(PAGE_DOWN)   &mkp MB1   &mkp MB2
+                &kp TAB                          &mkp MB4   &mkp MB5   &lt SCROLL TAB              &mkp MB1   &mkp MB2
             >;
             display-name = "Default layer";
         };
