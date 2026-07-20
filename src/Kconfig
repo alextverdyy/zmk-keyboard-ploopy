@@ -1,0 +1,20 @@
+# Kconfig for built-in input processors
+
+config ZMK_INPUT_PROCESSOR_SCROLL_SMOOTH
+    bool "Scroll Smoothing Input Processor (EMA + deadzone + adaptive gain)"
+    default y
+    depends on DT_HAS_ZMK_INPUT_PROCESSOR_SCROLL_SMOOTH_ENABLED
+    select ZMK_POINTING
+    help
+      Pre-filter for scroll smoothing.  Sits between zip_xy_to_scroll_mapper
+      and scroll_inertia.  Applies:
+        1) Deadzone truncation  — zero sub-threshold deltas,
+        2) EMA low-pass filter  — α = 0..1000 permille,
+        3) Adaptive gain        — scale output by velocity.
+
+      Without this filter, scroll_inertia's internal EMA receives raw
+      per-event deltas directly from the scroll mapper, which include
+      sensor jitter that can make the arming heuristics unreliable
+      (false coasts on micro-flicks or missed coasts on fast ones).
+
+      Parameters are settable via Devicetree on the scroll_smooth node.

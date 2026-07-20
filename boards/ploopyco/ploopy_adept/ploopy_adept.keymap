@@ -69,24 +69,27 @@
 
         scroller {
             layers = <SCROLL>;
-            // 1:1 scroll scaler kept here as a placeholder — tune the two
-            // numeric arguments (multiply, divide) to taste. Without it,
-            // WHEEL values pass through at the natural 1-tick-per-ball-unit
-            // rate; with it, you can slow scroll down (e.g. `2 5` to give
-            // 0.4x) or speed it up without changing cursor speed.
+            // Scroll chain order (input arrives from top, flows down):
             //
-            // scroll_inertia: previous scale=4 / scale-div=675 was tuned for
-            // the README's recommended chain ending with `zip_scroll_scaler
-            // 4 675` (the two mirror each other so the net scaling is 1:1).
-            // We don't have that trailing scaler, so the inertia output was
-            // * (4/675) ≈ 0.6% per tick — effectively invisible coast.
+            //   1. zip_xy_transform (orientation)
+            //   2. zip_xy_to_scroll_mapper  — Y→WHEEL, X→HWHEEL
+            //   3. scroll_smooth             — deadzone + EMA + adaptive gain
+            //   4. scroll_inertia            — kinetic coast
             //
-            // Picking the README's "1:10 ratio" tier instead (scale 100,
-            // scale-div 1000) gives a smooth coast at reasonable scroll
-            // unit rates without needing a compensating scaler after.
+            // scroll_smooth sits BEFORE scroll_inertia so the inertia
+            // processor's internal EMA and arming heuristics receive
+            // pre-filtered scroll deltas.  Without this pre-filter, raw
+            // sensor jitter from the PMW3360 at 900 CPI causes false
+            // coast triggers on micro-flicks and missed triggers on
+            // fast accelerating flicks.
+            //
+            // The order matters: YOU MUST PUT scroll_smooth BEFORE
+            // scroll_inertia in this list, not after it.  POST-inertia
+            // placement would filter the coasting ticks, which is the
+            // wrong signal to smooth.
             input-processors = <&zip_xy_transform (SCROLL_TRANSFORM)>,
                                <&zip_xy_to_scroll_mapper>,
-                               <&zip_scroll_scaler 1 1>,
+                               <&scroll_smooth>,
                                <&scroll_inertia>;
         };
     };
@@ -122,12 +125,60 @@
     // the chain). `layer = <1>` so state resets the moment SCROLL toggles off,
     // which avoids the "stuck scroll lock on re-entry" symptom called out in
     // the module's dt-binding description.
+    // ── Scroll smoothing pre-filter (built-in, zmk-input-processor-scroll-smooth) ──
+    // Sits BEFORE scroll_inertia in the chain; pre-filters PMW3360 jitter
+    // so the inertia processor sees clean deltas for reliable coast arming.
+    //
+    // Three stages:
+    //   deadzone       — zero sub-3 delta    (PMW3360 at 900 CPI ≈ 0.3 degrees ball)
+    //   alpha=400      — 40% new / 60% hist  (smooths sensor jitter at 125 Hz)
+    //   gain-min=800   — 0.8x at slow scroll (precision)
+    //   gain-max=1500  — 1.5x at fast scroll (flick speed)
+    //   threshold=500  — transition midpoint
+    //
+    // Tunable by overriding any property below and rebuilding.
+    scroll_smooth: scroll_smooth {
+        compatible = "zmk,input-processor-scroll-smooth";
+        #input-processor-cells = <0>;
+        deadzone = <3>;
+        alpha = <400>;
+        gain-min = <800>;
+        gain-max = <1500>;
+        gain-threshold = <500>;
+    };
+
+    // ── Scroll kinetic inertia (mjmjm0101/zmk-input-processor-scroll-inertia) ──
+    // Tuned for PMW3360 at 900 CPI / 125 Hz event rate.
+    //
+    // Key differences from module defaults (which target 1000 CPI PMW3610):
+    //   start=30       — arm on lower peak velocity
+    //   move=60        — arm after less total movement
+    //   gain=300/blend=700 — EMA coefficient
+    //   release=16     — 2 ms silence
+    //   decel-ratio=800 — 80% deceleration to trigger coast
+    //   friction=25    — Coulomb friction (low for smooth tail)
+    //   stop=5         — coast stops at very low velocity
+    //   scale=100/scale-div=1000 — 0.1x per tick
     scroll_inertia: scroll_inertia {
         compatible = "zmk,input-processor-scroll-inertia";
         #input-processor-cells = <0>;
         layer = <1>;
+        start = <30>;
+        move = <60>;
+        release = <16>;
+        gain = <300>;
+        blend = <700>;
+        decel-ratio = <800>;
+        decel-samples = <4>;
+        friction = <25>;
+        stop = <5>;
         scale = <100>;
         scale-div = <1000>;
+        tick = <8>;
+        gesture-timeout = <200>;
+        handoff-ms = <60>;
+        min-events = <5>;
+        exact-magnitude;
     };
 
     combos {

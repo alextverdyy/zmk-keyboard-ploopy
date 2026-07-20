@@ -1,1 +1,2 @@
 add_subdirectory(drivers)
+add_subdirectory_ifdef(CONFIG_ZMK_INPUT_PROCESSOR_SCROLL_SMOOTH src)
