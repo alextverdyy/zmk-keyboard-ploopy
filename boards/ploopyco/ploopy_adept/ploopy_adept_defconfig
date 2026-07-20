@@ -18,6 +18,19 @@ CONFIG_ZMK_MOUSE=y
 # May not work well on MacOS
 # CONFIG_ZMK_POINTING_SMOOTH_SCROLLING=y
 
+# zmk-input-processor-acceleration (nuovotaka): unlike the predecessor,
+# this Kconfig has no `default $(dt_compat_enabled,...)` so the parent symbol
+# has to be enabled explicitly. The choice config below depends on the parent.
+CONFIG_ZMK_INPUT_PROCESSOR_ACCELERATION=y
+# Pick the multi-speed "Standard" curve so the min-factor/max-factor/
+# speed-threshold/speed-max/acceleration-exponent properties in
+# ploopy_adept.dts take effect. (Default is SIMPLE which uses a different
+# property set.)
+CONFIG_INPUT_PROCESSOR_ACCEL_LEVEL_STANDARD=y
+
+# zmk-input-processor-scroll-inertia (mjmjm0101) — auto-enables when the
+# &scroll_inertia node is referenced, so no explicit CONFIG needed here.
+
 # Required for persistant settings (mouse wheel DPI and studio keymaps)
 CONFIG_MPU_ALLOW_FLASH_WRITE=y
 CONFIG_NVS=y

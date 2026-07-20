@@ -159,17 +159,30 @@
 
 // Pointer acceleration — same values as kaihchang/zmk-simply-adept-dongle-combo
 // (simply_adept_trackball.overlay). 0.6x at slow speeds for precision, 3.0x at
-// high speeds for flicks, with fractional remainder tracking so slow scrolling is
-// smooth. The `pointer_accel` node itself is pulled in by the
-// <behaviors/input_gestures_accel.dtsi> include above; we just override properties.
+// high speeds for flicks. Now using nuovotaka's multi-level fork (which shares
+// the compatible string with the previous oleksandrmaslov module — only one of
+// them can be in the workspace).
+//
+// Differences vs. the predecessor:
+//   - `codes` (array) replaces separate `x-codes` / `y-codes`
+//   - `sensor-dpi` lets the processor scale to the actual PMW3360 CPI in
+//     ploopy_classic_2.dts/ploopy_adept.dts so velocity-based thresholds
+//     remain meaningful across re-CPI'ing
+//   - `track-remainders` is DEPRECATED (silently ignored; node-internal
+//     remainders handle it now)
+//   - Kconfig INPUT_PROCESSOR_ACCEL_LEVEL_STANDARD=y must be set for the
+//     min/max/speed-* parameters below to be consumed by the code path
+//     (default is _SIMPLE which reads only sensitivity/max-factor/curve-type)
 &pointer_accel {
     input-type = <INPUT_EV_REL>;
+    codes = <INPUT_REL_X INPUT_REL_Y>;
+    sensor-dpi = <900>;
+    // Level 2 (Standard) curve — same numerics as kaihchang's reference
     min-factor = <600>;
     max-factor = <3000>;
     speed-threshold = <900>;
     speed-max = <1800>;
     acceleration-exponent = <1>;
-    track-remainders;
 };
 
 &gpio0 {
