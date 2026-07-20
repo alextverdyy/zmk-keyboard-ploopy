@@ -17,21 +17,24 @@
 /*
  * Sensor orientation transforms.
  *
- * The PMW3360 in the Ploopy Adept is mounted rotated relative to a normal
- * mouse. Reference: kaihchang/zmk-simply-adept-dongle-combo
- * (simply_adept_dongle.overlay), which uses INPUT_TRANSFORM_XY_SWAP at the
- * trackball listener and INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_Y_INVERT
- * inside the scroll layer.
+ * The PMW3360 in the Ploopy Adept is mounted with its X axis pointing to
+ * device-LEFT (instead of device-RIGHT) — i.e. the sensor PCB is flipped
+ * along X. Y is already oriented correctly. Therefore only X needs inverting.
  *
- * The same defaults are used here. If your Adept feels inverted or sideways
- * after flashing, tweak SENSOR_TRANSFORM and SCROLL_TRANSFORM below. Available
- * flags (bitwise OR them):
+ * The same transform is applied inside the SCROLL layer so that drag-scroll
+ * keeps the same "spin the ball toward top = page up" direction. If you'd
+ * rather have "ball-top = page down" (reverse scroll), OR
+ * INPUT_TRANSFORM_Y_INVERT into SCROLL_TRANSFORM only — do not touch
+ * SENSOR_TRANSFORM.
+ *
+ * If you ever flip the sensor PCB or change mounting, tweak SENSOR_TRANSFORM.
+ * Available flags (bitwise OR them):
  *   INPUT_TRANSFORM_XY_SWAP  - swap X and Y axes
  *   INPUT_TRANSFORM_X_INVERT - negate X
  *   INPUT_TRANSFORM_Y_INVERT - negate Y
  */
-#define SENSOR_TRANSFORM (INPUT_TRANSFORM_XY_SWAP)
-#define SCROLL_TRANSFORM (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_Y_INVERT)
+#define SENSOR_TRANSFORM (INPUT_TRANSFORM_X_INVERT)
+#define SCROLL_TRANSFORM (INPUT_TRANSFORM_X_INVERT)
 
 / {
     // Drag-scroll is enabled while the SCROLL layer is held.
