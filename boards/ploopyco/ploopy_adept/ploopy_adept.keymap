@@ -69,27 +69,11 @@
 
         scroller {
             layers = <SCROLL>;
-            // Scroll chain order (input arrives from top, flows down):
-            //
-            //   1. zip_xy_transform (orientation)
-            //   2. zip_xy_to_scroll_mapper  — Y→WHEEL, X→HWHEEL
-            //   3. scroll_smooth             — deadzone + EMA + adaptive gain
-            //   4. scroll_inertia            — kinetic coast
-            //
-            // scroll_smooth sits BEFORE scroll_inertia so the inertia
-            // processor's internal EMA and arming heuristics receive
-            // pre-filtered scroll deltas.  Without this pre-filter, raw
-            // sensor jitter from the PMW3360 at 900 CPI causes false
-            // coast triggers on micro-flicks and missed triggers on
-            // fast accelerating flicks.
-            //
-            // The order matters: YOU MUST PUT scroll_smooth BEFORE
-            // scroll_inertia in this list, not after it.  POST-inertia
-            // placement would filter the coasting ticks, which is the
-            // wrong signal to smooth.
+            // Scroll chain:
+            //   zip_xy_to_scroll_mapper  — Y→WHEEL, X→HWHEEL
+            //   scroll_inertia            — kinetic coast via mjmjm0101 module
             input-processors = <&zip_xy_transform (SCROLL_TRANSFORM)>,
                                <&zip_xy_to_scroll_mapper>,
-                               <&scroll_smooth>,
                                <&scroll_inertia>;
         };
     };
@@ -117,68 +101,15 @@
     };
 
     // Trackball scroll inertia (mjmjm0101/zmk-input-processor-scroll-inertia).
-    //
-    // The module has no auto-dtsi — &scroll_inertia must be declared by us
-    // and its properties describe the decay/timing behaviour. Defaults below are
-    // tuned for a 1000 CPI PMW3610; we over-specify to match the README's
-    // "4:675 recommended" placement (inertia placed before a 4:675 scaler in
-    // the chain). `layer = <1>` so state resets the moment SCROLL toggles off,
-    // which avoids the "stuck scroll lock on re-entry" symptom called out in
-    // the module's dt-binding description.
-    // ── Scroll smoothing pre-filter (built-in, zmk-input-processor-scroll-smooth) ──
-    // Sits BEFORE scroll_inertia in the chain; pre-filters PMW3360 jitter
-    // so the inertia processor sees clean deltas for reliable coast arming.
-    //
-    // Three stages:
-    //   deadzone       — zero sub-3 delta    (PMW3360 at 900 CPI ≈ 0.3 degrees ball)
-    //   alpha=400      — 40% new / 60% hist  (smooths sensor jitter at 125 Hz)
-    //   gain-min=800   — 0.8x at slow scroll (precision)
-    //   gain-max=1500  — 1.5x at fast scroll (flick speed)
-    //   threshold=500  — transition midpoint
-    //
-    // Tunable by overriding any property below and rebuilding.
-    scroll_smooth: scroll_smooth {
-        compatible = "zmk,input-processor-scroll-smooth";
-        #input-processor-cells = <0>;
-        deadzone = <3>;
-        alpha = <400>;
-        gain-min = <800>;
-        gain-max = <1500>;
-        gain-threshold = <500>;
-    };
-
-    // ── Scroll kinetic inertia (mjmjm0101/zmk-input-processor-scroll-inertia) ──
-    // Tuned for PMW3360 at 900 CPI / 125 Hz event rate.
-    //
-    // Key differences from module defaults (which target 1000 CPI PMW3610):
-    //   start=30       — arm on lower peak velocity
-    //   move=60        — arm after less total movement
-    //   gain=300/blend=700 — EMA coefficient
-    //   release=16     — 2 ms silence
-    //   decel-ratio=800 — 80% deceleration to trigger coast
-    //   friction=25    — Coulomb friction (low for smooth tail)
-    //   stop=5         — coast stops at very low velocity
-    //   scale=100/scale-div=1000 — 0.1x per tick
+    // Using README recommended 4:675 scale ratio.
+    // layer = <1> so state resets the moment SCROLL toggles off, avoiding
+    // the stuck scroll lock on re-entry symptom.
     scroll_inertia: scroll_inertia {
         compatible = "zmk,input-processor-scroll-inertia";
         #input-processor-cells = <0>;
         layer = <1>;
-        start = <30>;
-        move = <60>;
-        release = <16>;
-        gain = <300>;
-        blend = <700>;
-        decel-ratio = <800>;
-        decel-samples = <4>;
-        friction = <25>;
-        stop = <5>;
-        scale = <100>;
-        scale-div = <1000>;
-        tick = <8>;
-        gesture-timeout = <200>;
-        handoff-ms = <60>;
-        min-events = <5>;
-        exact-magnitude;
+        scale = <4>;
+        scale-div = <675>;
     };
 
     combos {
