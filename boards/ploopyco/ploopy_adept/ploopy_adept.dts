@@ -10,6 +10,8 @@
 #include "ploopy_adept-pinctrl.dtsi"
 #include "ploopy_adept-layouts.dtsi"
 #include <dt-bindings/zmk/matrix_transform.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <behaviors/input_gestures_accel.dtsi>
 #include <freq.h>
 
 / {
@@ -153,6 +155,21 @@
         compatible = "zmk,input-listener";
         device = <&mouse>;
     };
+};
+
+// Pointer acceleration — same values as kaihchang/zmk-simply-adept-dongle-combo
+// (simply_adept_trackball.overlay). 0.6x at slow speeds for precision, 3.0x at
+// high speeds for flicks, with fractional remainder tracking so slow scrolling is
+// smooth. The `pointer_accel` node itself is pulled in by the
+// <behaviors/input_gestures_accel.dtsi> include above; we just override properties.
+&pointer_accel {
+    input-type = <INPUT_EV_REL>;
+    min-factor = <600>;
+    max-factor = <3000>;
+    speed-threshold = <900>;
+    speed-max = <1800>;
+    acceleration-exponent = <1>;
+    track-remainders;
 };
 
 &gpio0 {

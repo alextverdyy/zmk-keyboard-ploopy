@@ -6,6 +6,12 @@ manifest:
       url-base: https://github.com/petejohanson
     - name: george-norton
       url-base: https://github.com/george-norton
+    - name: efogdev
+      url-base: https://github.com/efogdev
+    - name: badjeff
+      url-base: https://github.com/badjeff
+    - name: oleksandrmaslov
+      url-base: https://github.com/oleksandrmaslov
   projects:
     - name: zmk
       remote: zmkfirmware
@@ -20,3 +26,12 @@ manifest:
     - name: zmk-driver-rp2040-sleep
       remote: george-norton
       revision: v0.3
+    - name: zmk-input-processor-report-rate-limit
+      remote: badjeff
+      revision: main
+    - name: zmk-input-processor-xyz
+      remote: badjeff
+      revision: main
+    - name: zmk-pointing-acceleration
+      remote: oleksandrmaslov
+      revision: main

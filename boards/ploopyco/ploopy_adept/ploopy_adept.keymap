@@ -8,6 +8,7 @@
 #include <dt-bindings/zmk/mouse.h>
 #include <dt-bindings/zmk/input_transform.h>
 #include <input/processors.dtsi>
+#include <input/processors/report_rate_limit.dtsi>
 
 #define BASE 0
 #define SCROLL 1
@@ -40,8 +41,18 @@
     // Drag-scroll is enabled while the SCROLL layer is held.
     // The base mouse_listener applies the orientation transform so that
     // sensor motion maps onto screen X/Y in the natural direction.
+    // Pipeline order (mirrors kaihchang/zmk-simply-adept-dongle-combo):
+    //   1. pointer_accel         - velocity-based acceleration, fine control at
+    //                                low speeds, flick boost at high speeds
+    //   2. zip_report_rate_limit  - cap event rate (limit = 8ms) for stable BT/USB
+    //                                reports
+    //   3. zip_xy_transform       - sensor orientation fix-up (X_INVERT)
+    //   4. zip_xy_scaler          - 3x Y, 2x X amplification to compensate for
+    //                                PMW3360 running at 900 CPI vs typical 1200
     mouse_listener {
-        input-processors = <&zip_xy_transform (SENSOR_TRANSFORM)>,
+        input-processors = <&pointer_accel>,
+                           <&zip_report_rate_limit 8>,
+                           <&zip_xy_transform (SENSOR_TRANSFORM)>,
                            <&zip_xy_scaler 3 2>;
 
         scroller {
@@ -91,15 +102,24 @@
         compatible = "zmk,keymap";
 
         base_layer {
+            // Position 2 upgrades the original &mo SCROLL to an &lt hold-tap so
+            // the small "drag-scroll" button becomes a multi-function key: hold
+            // for the SCROLL layer (drag-scroll), tap for LC(PAGE_DOWN) (browser
+            // forward-tab). Pattern taken from kaihchang's simply_adept BASE
+            // layer where their pos-2/pos-35 key plays the same role.
             bindings = <
-                &mkp MB4    &mkp MB5    &mo SCROLL    &mkp MB1    &mkp MB2    &mkp MB3
+                &mkp MB4    &mkp MB5    &lt SCROLL LC(PAGE_DOWN)    &mkp MB1    &mkp MB2    &mkp MB3
             >;
             display-name = "Default layer";
         };
 
         scroll_layer {
+            // Position 2 mirrors the kaihchang pattern: tap-to-return-to-base
+            // while the SCROLL layer is held (instead of holding the same key
+            // again). The remaining positions stay transparent so MB4/MB5/MB1/
+            // MB2/MB3 remain reachable during scroll (e.g. for tap-to-stop).
             bindings = <
-                &trans  &trans  &trans  &trans  &trans  &trans
+                &trans  &trans  &to 0   &trans  &trans  &trans
             >;
             display-name = "Drag-scroll layer";
         };
