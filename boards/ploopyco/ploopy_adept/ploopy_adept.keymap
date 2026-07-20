@@ -11,6 +11,11 @@
 #include <input/processors/report_rate_limit.dtsi>
 
 #define BASE 0
+// SCROLL is layer index 1 — that matches the position of `scroll_layer`
+// (the 2nd child of `keymap`, after `base_layer`). Renumbering to 5 would
+// require adding 4 placeholder layers before scroll_layer so it lands at
+// child-index 5, which is a strictly larger change. Keep the local
+// convention; the macro just disambiguates numeric literals.
 #define SCROLL 1
 #define RESERVED1 2
 #define RESERVED2 3
@@ -57,8 +62,13 @@
 
         scroller {
             layers = <SCROLL>;
+            // &scroll_inertia sits AFTER zip_xy_to_scroll_mapper so it sees
+            // integer scroll-tick values (HWHEEL/WHEEL), not raw rel-x/y.
+            // `&zip_xy_to_scroll_mapper` already converts Y→WHEEL / X→HWHEEL,
+            // which is the input the inertia processor expects.
             input-processors = <&zip_xy_transform (SCROLL_TRANSFORM)>,
-                               <&zip_xy_to_scroll_mapper>;
+                               <&zip_xy_to_scroll_mapper>,
+                               <&scroll_inertia>;
         };
     };
 
@@ -84,16 +94,48 @@
         };
     };
 
+    // Trackball scroll inertia (mjmjm0101/zmk-input-processor-scroll-inertia).
+    //
+    // The module has no auto-dtsi — &scroll_inertia must be declared by us
+    // and its properties describe the decay/timing behaviour. Defaults below are
+    // tuned for a 1000 CPI PMW3610; we over-specify to match the README's
+    // "4:675 recommended" placement (inertia placed before a 4:675 scaler in
+    // the chain). `layer = <1>` so state resets the moment SCROLL toggles off,
+    // which avoids the "stuck scroll lock on re-entry" symptom called out in
+    // the module's dt-binding description.
+    scroll_inertia: scroll_inertia {
+        compatible = "zmk,input-processor-scroll-inertia";
+        #input-processor-cells = <0>;
+        layer = <1>;
+        scale = <4>;
+        scale-div = <675>;
+    };
+
     combos {
         compatible = "zmk,combos";
         combo_bootloader {
+            // Press both top-row utility keys (LC(PAGE_UP) and MB4) to enter
+            // bootloader. Top row positions are adjacent and easy to hit.
             timeout-ms = <500>;
             key-positions = <0 1>;
             bindings = <&bootloader>;
         };
-        combo_studio_unlock {
-            timeout-ms = <500>;
+        combo_mb3 {
+            // The kaihchang trackball pattern: only MB1 + MB2 are bound to the
+            // big bottom buttons; MB3 (middle click) is synthesized from the
+            // pinch-chord on both BIG buttons, just like in
+            // simply_adept_dongle.override's combo_mb3 at <38 39>.
+            timeout-ms = <100>;
             key-positions = <4 5>;
+            bindings = <&mkp MB3>;
+        };
+        combo_studio_unlock {
+            // Move studio-unlock off <4 5> (now used by combo_mb3) onto the
+            // 4-button diagonal: MB4 + MB5 + MB1 + MB2. This is the kaihchang
+            // pattern where studio_unlock uses a 4-key combo rather than a
+            // 2-key pinch (avoids accidental triggers from normal mouse use).
+            timeout-ms = <150>;
+            key-positions = <1 2 4 5>;
             bindings = <&studio_unlock>;
         };
     };
@@ -102,24 +144,37 @@
         compatible = "zmk,keymap";
 
         base_layer {
-            // Position 2 upgrades the original &mo SCROLL to an &lt hold-tap so
-            // the small "drag-scroll" button becomes a multi-function key: hold
-            // for the SCROLL layer (drag-scroll), tap for LC(PAGE_DOWN) (browser
-            // forward-tab). Pattern taken from kaihchang's simply_adept BASE
-            // layer where their pos-2/pos-35 key plays the same role.
+            // Mirrors the ASCII-art layout from kaihchang/zmk-simply-adept:
+            //
+            //   ╭────────────────┬──────────┬─────────┬────────────────────────╮
+            //   │  Left Tab      │ Previous │ Next    │ scroll_layer/Right Tab │
+            //   │   LC(PAGE_UP)  │   MB4    │   MB5   │  &lt SCROLL LC(PAGE_DOWN) │
+            //   ├────────────────┼──────────┼─────────┼────────────────────────┤
+            //   │  Left Click    │          │         │ Right Click            │
+            //   │    MB1         │          │         │    MB2                 │
+            //   ╰────────────────┴──────────┴─────────┴────────────────────────╯
+            //
+            // Pos 0 (top-left TALL)  : utility       — tap = browser back-tab
+            // Pos 1 (top-2nd SMALL)  : mouse back    — MB4
+            // Pos 2 (top-3rd SMALL)  : mouse forward — MB5
+            // Pos 3 (top-right TALL) : scroll layer  — hold = SCROLL, tap = fwd-tab
+            // Pos 4 (bottom-left BIG): primary left  — MB1
+            // Pos 5 (bottom-right BIG): primary right — MB2
+            // Middle click (MB3) is chorded via combo_mb3 above.
             bindings = <
-                &mkp MB4    &mkp MB5    &lt SCROLL LC(PAGE_DOWN)    &mkp MB1    &mkp MB2    &mkp MB3
+                &kp LC(PAGE_UP)               &mkp MB4   &mkp MB5   &lt SCROLL LC(PAGE_DOWN)   &mkp MB1   &mkp MB2
             >;
             display-name = "Default layer";
         };
 
         scroll_layer {
-            // Position 2 mirrors the kaihchang pattern: tap-to-return-to-base
-            // while the SCROLL layer is held (instead of holding the same key
-            // again). The remaining positions stay transparent so MB4/MB5/MB1/
-            // MB2/MB3 remain reachable during scroll (e.g. for tap-to-stop).
+            // In SCROLL: the same physical pos-3 button (which is &lt SCROLL
+            // in BASE) becomes a tap-to-return-to-base so you can exit the
+            // SCROLL layer with one tap instead of holding it.
+            // All other positions stay transparent so MB4/MB5/MB1/MB2 still
+            // work while you're drag-scrolling (e.g. for tap-to-stop-drag).
             bindings = <
-                &trans  &trans  &to 0   &trans  &trans  &trans
+                &trans  &trans  &trans  &to 0   &trans  &trans
             >;
             display-name = "Drag-scroll layer";
         };
