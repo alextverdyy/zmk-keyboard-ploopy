@@ -6,6 +6,7 @@
 #include <behaviors/mouse_move.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/mouse.h>
+#include <dt-bindings/zmk/input_transform.h>
 #include <input/processors.dtsi>
 
 #define BASE 0
@@ -13,14 +14,37 @@
 #define RESERVED1 2
 #define RESERVED2 3
 
+/*
+ * Sensor orientation transforms.
+ *
+ * The PMW3360 in the Ploopy Adept is mounted rotated relative to a normal
+ * mouse. Reference: kaihchang/zmk-simply-adept-dongle-combo
+ * (simply_adept_dongle.overlay), which uses INPUT_TRANSFORM_XY_SWAP at the
+ * trackball listener and INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_Y_INVERT
+ * inside the scroll layer.
+ *
+ * The same defaults are used here. If your Adept feels inverted or sideways
+ * after flashing, tweak SENSOR_TRANSFORM and SCROLL_TRANSFORM below. Available
+ * flags (bitwise OR them):
+ *   INPUT_TRANSFORM_XY_SWAP  - swap X and Y axes
+ *   INPUT_TRANSFORM_X_INVERT - negate X
+ *   INPUT_TRANSFORM_Y_INVERT - negate Y
+ */
+#define SENSOR_TRANSFORM (INPUT_TRANSFORM_XY_SWAP)
+#define SCROLL_TRANSFORM (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_Y_INVERT)
+
 / {
-    // Enable drag scroll is the SCROLL layer is active
+    // Drag-scroll is enabled while the SCROLL layer is held.
+    // The base mouse_listener applies the orientation transform so that
+    // sensor motion maps onto screen X/Y in the natural direction.
     mouse_listener {
-        input-processors = <&zip_xy_scaler 3 2>;
+        input-processors = <&zip_xy_transform (SENSOR_TRANSFORM)>,
+                           <&zip_xy_scaler 3 2>;
 
         scroller {
             layers = <SCROLL>;
-            input-processors = <&zip_xy_to_scroll_mapper>;
+            input-processors = <&zip_xy_transform (SCROLL_TRANSFORM)>,
+                               <&zip_xy_to_scroll_mapper>;
         };
     };
 
