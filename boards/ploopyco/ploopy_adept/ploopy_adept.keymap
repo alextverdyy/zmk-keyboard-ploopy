@@ -92,7 +92,7 @@
 
         base_layer {
             bindings = <
-                &mkp MB4    &mkp MB5    &mo SCROLL    &mkp MB2    &mkp MB1    &mkp MB3
+                &mkp MB4    &mkp MB5    &mo SCROLL    &mkp MB1    &mkp MB2    &mkp MB3
             >;
             display-name = "Default layer";
         };
