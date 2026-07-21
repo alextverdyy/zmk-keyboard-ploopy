@@ -10,15 +10,32 @@
 #include <input/processors.dtsi>
 #include <input/processors/report_rate_limit.dtsi>
 
+/* Reserved layer indices — kept so future additions can extend the
+ * base/scroll pair without renumbering layer macros or scrambler order.
+ */
 #define BASE 0
-// SCROLL is layer index 1 — that matches the position of `scroll_layer`
-// (the 2nd child of `keymap`, after `base_layer`). Renumbering to 5 would
-// require adding 4 placeholder layers before scroll_layer so it lands at
-// child-index 5, which is a strictly larger change. Keep the local
-// convention; the macro just disambiguates numeric literals.
 #define SCROLL 1
 #define RESERVED1 2
 #define RESERVED2 3
+
+/* Position names used by the comments and the combos below. Matches the
+ * 6-input matrix declared in ploopy_adept.dts.
+ *
+ *   ╭──────────┬─────────┬─────────┬──────────────╮
+ *   │ Pos 0    │ Pos 1   │ Pos 2   │ Pos 3        │
+ *   │ Tab      │ MB4     │ MB5     │ &lt SCROLL   │
+ *   │ tall     │ small   │ small   │ tall         │
+ *   ├──────────┴─────────┴─────────┴──────────────┤
+ *   │ Pos 4                       │ Pos 5       │
+ *   │ MB1 (big left)              │ MB2 (big)   │
+ *   ╰─────────────────────────────┴─────────────╯
+ */
+#define POS_TAB 0
+#define POS_MB4 1
+#define POS_MB5 2
+#define POS_SCROLL_KEY 3
+#define POS_MB1 4
+#define POS_MB2 5
 
 /*
  * Sensor orientation transforms.
@@ -115,28 +132,22 @@
     combos {
         compatible = "zmk,combos";
         combo_bootloader {
-            // Press both top-row utility keys (LC(PAGE_UP) and MB4) to enter
-            // bootloader. Top row positions are adjacent and easy to hit.
+            // Top-row utility + MB4. Adjacent and easy to hit.
             timeout-ms = <500>;
-            key-positions = <0 1>;
+            key-positions = <POS_TAB POS_MB4>;
             bindings = <&bootloader>;
         };
         combo_mb3 {
-            // The kaihchang trackball pattern: only MB1 + MB2 are bound to the
-            // big bottom buttons; MB3 (middle click) is synthesized from the
-            // pinch-chord on both BIG buttons, just like in
-            // simply_adept_dongle.override's combo_mb3 at <38 39>.
+            // Pinch-chord the two BIG buttons to send middle click.
             timeout-ms = <100>;
-            key-positions = <4 5>;
+            key-positions = <POS_MB1 POS_MB2>;
             bindings = <&mkp MB3>;
         };
         combo_studio_unlock {
-            // Move studio-unlock off <4 5> (now used by combo_mb3) onto the
-            // 4-button diagonal: MB4 + MB5 + MB1 + MB2. This is the kaihchang
-            // pattern where studio_unlock uses a 4-key combo rather than a
-            // 2-key pinch (avoids accidental triggers from normal mouse use).
+            // 4-key diagonal (MB4 + MB5 + MB1 + MB2) avoids accidental
+            // triggers during normal mouse use.
             timeout-ms = <150>;
-            key-positions = <1 2 4 5>;
+            key-positions = <POS_MB4 POS_MB5 POS_MB1 POS_MB2>;
             bindings = <&studio_unlock>;
         };
     };
