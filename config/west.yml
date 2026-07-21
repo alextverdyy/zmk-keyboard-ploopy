@@ -2,22 +2,16 @@ manifest:
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
-    - name: petejohanson
-      url-base: https://github.com/petejohanson
     - name: george-norton
       url-base: https://github.com/george-norton
-    - name: efogdev
-      url-base: https://github.com/efogdev
     - name: badjeff
       url-base: https://github.com/badjeff
-    - name: oleksandrmaslov
-      url-base: https://github.com/oleksandrmaslov
+    - name: nuovotaka
+      url-base: https://github.com/nuovotaka
     - name: mjmjm0101
       url-base: https://github.com/mjmjm0101
     - name: cormoran
       url-base: https://github.com/cormoran
-    - name: nuovotaka
-      url-base: https://github.com/nuovotaka
   projects:
     - name: zmk
       remote: zmkfirmware
@@ -39,23 +33,19 @@ manifest:
       remote: badjeff
       revision: main
     # Replaces zmk-pointing-acceleration (oleksandrmaslov). Both modules
-    # share the same module.yml name (`zmk-input-processor-acceleration`)
-    # and the same `pointer_accel` node, so they collide when both are
-    # fetched — keep only this one. Source: nuovotaka's "alpha" fork
-    # with multi-level configuration and proper DPI awareness.
+    # share the same `pointer_accel` node name and collide when fetched
+    # together. Keep only this multi-level fork.
     - name: zmk-pointing-acceleration-alpha
       remote: nuovotaka
       revision: main
     # Scroll inertia: drop-in input processor. No auto-dtsi, so the
-    # &scroll_inertia node is defined explicitly in ploopy_adept.keymap.
+    # `&scroll_inertia` node is defined explicitly in ploopy_adept.keymap.
     - name: zmk-input-processor-scroll-inertia
       remote: mjmjm0101
       revision: main
-    # Runtime input processor dependencies. The runtime module needs
-    # zmk-feature-custom-settings as a persistence backend. The runtime
-    # module itself additionally requires cormoran's patched ZMK
-    # (`zmk@cormoran/v0.3+custom-studio-protocol`) for the web-UI RPC
-    # to function — listed but disabled by default, see project notes.
+    # Persistence backend for the runtime input processor module.
+    # The runtime module itself requires cormoran's patched ZMK
+    # (`zmk@cormoran/v0.3+custom-studio-protocol`) for the web-UI RPC.
     - name: zmk-feature-custom-settings
       remote: cormoran
       revision: main

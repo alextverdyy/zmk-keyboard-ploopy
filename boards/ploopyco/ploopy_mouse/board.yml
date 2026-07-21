@@ -1,5 +1,0 @@
-board:
-  name: ploopy_mouse
-  vendor: ploopyco
-  socs:
-    - name: rp2040
